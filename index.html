@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mood Music Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --happy: #1db954;
+      --sad: #4a90e2;
+      --angry: #e74c3c;
+      --neutral: #9b59b6;
+      --bg: #0a0a1a;
+      --card: rgba(20, 20, 40, 0.7);
+      --glow: 0 0 20px;
+      --accent: #1db954;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Orbitron', 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at 50% 50%, rgba(29, 185, 84, 0.1), transparent 70%);
+      pointer-events: none;
+      animation: pulse 8s infinite alternate;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.3; }
+      100% { opacity: 0.6; }
+    }
+
+    h1 {
+      font-size: 3.5em;
+      margin: 40px 0 10px;
+      background: linear-gradient(90deg, #1db954, #9b59b6, #e74c3c);
+    -webkit-background-clip: text; 
+     background-clip: text;         
+
+    
+    -webkit-text-fill-color: transparent; 
+    color: transparent;                   
+
+    text-shadow: 0 0 30px rgba(255,255,255,0.3);
+    animation: glow 4s infinite alternate;
+    }
+
+    @keyframes glow {
+      from { text-shadow: 0 0 20px #fff; }
+      to { text-shadow: 0 0 40px #1db954, 0 0 60px #9b59b6; }
+    }
+
+    p {
+      font-size: 1.3em;
+      opacity: 0.9;
+      margin-bottom: 40px;
+    }
+
+    #manageBtn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 12px 28px;
+      background: rgba(114, 137, 218, 0.3);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(114, 137, 218, 0.5);
+      color: white;
+      border-radius: 50px;
+      cursor: pointer;
+      font-size: 16px;
+      box-shadow: var(--glow) rgba(114, 137, 218, 0.4);
+      transition: all 0.3s;
+      z-index: 100;
+    }
+
+    #manageBtn:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 0 30px rgba(114, 137, 218, 0.8);
+    }
+
+    input[type="file"] {
+      padding: 20px 40px;
+      font-size: 20px;
+      background: linear-gradient(45deg, var(--accent), #00d4aa);
+      color: white;
+      border: none;
+      border-radius: 60px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(29, 185, 84, 0.5);
+      transition: all 0.4s;
+      animation: float 6s infinite ease-in-out;
+    }
+
+    input[type="file"]:hover {
+      transform: scale(1.1);
+      box-shadow: 0 20px 50px rgba(29, 185, 84, 0.7);
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-15px); }
+    }
+
+    #uploadedImage {
+      max-width: 380px;
+      margin: 40px auto;
+      border-radius: 30px;
+      border: 5px solid transparent;
+      background: linear-gradient(#000, #000) padding-box,
+                  linear-gradient(45deg, var(--accent), #fff) border-box;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 0 30px rgba(255,255,255,0.1);
+      transition: all 0.8s;
+      animation: borderPulse 4s infinite;
+    }
+
+    @keyframes borderPulse {
+      0%, 100% { box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 0 30px rgba(255,255,255,0.1); }
+      50% { box-shadow: 0 30px 80px rgba(29,185,84,0.4), inset 0 0 50px rgba(255,255,255,0.2); }
+    }
+
+    #status {
+      font-size: 1.8em;
+      margin: 40px 0;
+      min-height: 80px;
+      font-weight: bold;
+      text-shadow: 0 0 20px rgba(255,255,255,0.5);
+      animation: fadeIn 1s;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* === CUSTOM MODERN AUDIO PLAYER === */
+    #customPlayer {
+      width: 90%;
+      max-width: 600px;
+      margin: 40px auto;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(15px);
+      border-radius: 30px;
+      padding: 25px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: all 0.5s;
+    }
+
+    #songTitle {
+      font-size: 1.4em;
+      margin-bottom: 20px;
+      text-shadow: 0 0 15px var(--accent);
+      color: var(--accent);
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    #playPauseBtn {
+      width: 80px;
+      height: 80px;
+      background: var(--accent);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      font-size: 36px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 30px var(--accent);
+      transition: all 0.3s;
+      margin: 0 auto 20px;
+      display: block;
+    }
+
+    #playPauseBtn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 15px 40px rgba(0,0,0,0.6), 0 0 50px var(--accent);
+    }
+
+    #progressContainer {
+      height: 12px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      margin: 20px 0;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    #progressBar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #fff);
+      border-radius: 10px;
+      box-shadow: 0 0 20px var(--accent);
+      transition: width 0.1s;
+    }
+
+    #timeDisplay {
+      font-size: 1.1em;
+      margin-top: 10px;
+      opacity: 0.8;
+    }
+
+    /* Modal styles (unchanged but enhanced) */
+    #playlistModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+    #playlistContent { background: linear-gradient(135deg, rgba(30,30,60,0.9), rgba(50,30,80,0.9)); padding: 40px; border-radius: 30px; max-width: 90%; max-height: 90%; overflow-y: auto; box-shadow: 0 30px 80px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1); }
+    .moodSection h3 { color: var(--accent); font-size: 2em; text-shadow: 0 0 15px var(--accent); }
+    #closeModal { padding: 15px 40px; background: linear-gradient(45deg, #e74c3c, #c0392b); color: white; border: none; border-radius: 50px; cursor: pointer; font-size: 18px; box-shadow: 0 10px 30px rgba(231,76,60,0.5); transition: all 0.3s; }
+    #closeModal:hover { transform: scale(1.1); box-shadow: 0 20px 50px rgba(231,76,60,0.7); }
+  </style>
+</head>
+<body>
+  <h1>MOOD MUSIC</h1>
+  <p>Upload a selfie → AI reads your emotion → Plays your personal vibe instantly</p>
+
+  <button id="manageBtn">⚙️ Manage Playlists</button>
+
+  <input type="file" id="imageUpload" accept="image/*">
+
+  <img id="uploadedImage" src="" alt="Your photo will appear here">
+
+  <div id="status">Initializing neural engine...</div>
+
+  <!-- Custom Modern Player -->
+  <div id="customPlayer" style="display:none;">
+    <div id="songTitle">Ready for your mood...</div>
+    <button id="playPauseBtn">▶</button>
+    <div id="progressContainer">
+      <div id="progressBar"></div>
+    </div>
+    <div id="timeDisplay">0:00 / 0:30</div>
+  </div>
+
+  <audio id="audioPlayer" preload="metadata"></audio>
+
+  <!-- Playlist Modal -->
+  <div id="playlistModal">
+    <div id="playlistContent">
+      <h2>Manage Your Mood Playlists</h2>
+      <p>Add your favorite MP3s. They stay saved forever in your browser.</p>
+      <div id="playlists"></div>
+      <button id="closeModal">Close Portal</button>
+    </div>
+  </div>
+
+  <script>
+    const moods = ['happy', 'sad', 'angry', 'neutral'];
+    const moodColors = { happy: '--happy', sad: '--sad', angry: '--angry', neutral: '--neutral' };
+    const dbName = 'MoodMusicDB';
+    let db;
+    const audio = document.getElementById('audioPlayer');
+    const customPlayer = document.getElementById('customPlayer');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const progressBar = document.getElementById('progressBar');
+    const progressContainer = document.getElementById('progressContainer');
+    const songTitle = document.getElementById('songTitle');
+    const timeDisplay = document.getElementById('timeDisplay');
+    let isPlaying = false;
+    let clipTimeout;
+
+    // IndexedDB setup (same as before)
+    const request = indexedDB.open(dbName, 1);
+    request.onupgradeneeded = (e) => {
+      db = e.target.result;
+      moods.forEach(mood => {
+        if (!db.objectStoreNames.contains(mood)) {
+          db.createObjectStore(mood, { keyPath: 'id', autoIncrement: true });
+        }
+      });
+    };
+    request.onsuccess = (e) => {
+      db = e.target.result;
+      loadModels();
+      refreshPlaylistView();
+    };
+
+    function refreshPlaylistView() {
+      const container = document.getElementById('playlists');
+      container.innerHTML = '';
+      moods.forEach(mood => {
+        const section = document.createElement('div');
+        section.className = 'moodSection';
+        section.innerHTML = `
+          <h3 style="color: var(${moodColors[mood]})">${mood.toUpperCase()} VIBES</h3>
+          <ul id="${mood}List" class="songList"></ul>
+          <input type="file" id="${mood}Add" accept="audio/mpeg" multiple style="margin:15px; padding:10px; background:var(${moodColors[mood]}); border-radius:20px;">
+          <button onclick="addToPlaylist('${mood}')" style="padding:10px 20px; background:var(${moodColors[mood]}); border:none; border-radius:20px; color:white; cursor:pointer;">+ Add Songs</button>
+        `;
+        container.appendChild(section);
+
+        const tx = db.transaction(mood);
+        const store = tx.objectStore(mood);
+        const list = document.getElementById(`${mood}List`);
+        store.getAll().onsuccess = (ev) => {
+          ev.target.result.forEach(song => {
+            const li = document.createElement('li');
+            li.textContent = song.name;
+            list.appendChild(li);
+          });
+        };
+      });
+    }
+
+    window.addToPlaylist = function(mood) {
+      const input = document.getElementById(`${mood}Add`);
+      const files = input.files;
+      if (files.length === 0) return;
+
+      const tx = db.transaction(mood, 'readwrite');
+      const store = tx.objectStore(mood);
+      Array.from(files).forEach(file => store.add({ name: file.name, blob: file }));
+      tx.oncomplete = () => {
+        input.value = '';
+        refreshPlaylistView();
+        alert(`Added ${files.length} songs to ${mood.toUpperCase()}!`);
+      };
+    };
+
+    document.getElementById('manageBtn').onclick = () => {
+      document.getElementById('playlistModal').style.display = 'flex';
+      refreshPlaylistView();
+    };
+    document.getElementById('closeModal').onclick = () => {
+      document.getElementById('playlistModal').style.display = 'none';
+    };
+
+    async function loadModels() {
+      const status = document.getElementById('status');
+      status.textContent = 'Initializing neural network...';
+      const modelPath = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+      await faceapi.nets.tinyFaceDetector.loadFromUri(modelPath);
+      await faceapi.nets.faceExpressionNet.loadFromUri(modelPath);
+      status.textContent = 'Neural engine ready. Upload your face.';
+    }
+
+    // Custom player controls
+    playPauseBtn.onclick = () => {
+      if (isPlaying) {
+        audio.pause();
+        playPauseBtn.textContent = '▶';
+      } else {
+        audio.play();
+        playPauseBtn.textContent = '⏸';
+      }
+      isPlaying = !isPlaying;
+    };
+
+    audio.ontimeupdate = () => {
+      if (audio.duration) {
+        const progress = (audio.currentTime / 30) * 100; // 30s clip
+        progressBar.style.width = progress + '%';
+        timeDisplay.textContent = `${Math.floor(audio.currentTime)}s / 30s`;
+      }
+    };
+
+    progressContainer.onclick = (e) => {
+      const rect = progressContainer.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const width = rect.width;
+      const newTime = (clickX / width) * 30;
+      audio.currentTime = newTime;
+    };
+
+    document.getElementById('imageUpload').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const img = document.getElementById('uploadedImage');
+      img.src = URL.createObjectURL(file);
+
+      const status = document.getElementById('status');
+      status.textContent = 'Scanning emotional frequency...';
+      audio.pause();
+      audio.src = '';
+      customPlayer.style.display = 'none';
+      playPauseBtn.textContent = '▶';
+      isPlaying = false;
+      progressBar.style.width = '0%';
+      timeDisplay.textContent = '0:00 / 0:30';
+
+      await img.decode();
+
+      const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions()).withFaceExpressions();
+
+      if (detections.length === 0) {
+        status.textContent = 'No human detected. Try again.';
+        return;
+      }
+
+      const expressions = detections[0].expressions;
+      const topMood = Object.keys(expressions).reduce((a, b) => expressions[a] > expressions[b] ? a : b);
+
+      document.body.style.setProperty('--accent', `var(${moodColors[topMood]})`);
+
+      const tx = db.transaction(topMood);
+      const store = tx.objectStore(topMood);
+      store.getAll().onsuccess = (ev) => {
+        const songs = ev.target.result;
+        if (songs.length === 0) {
+          status.textContent = `No songs in ${topMood.toUpperCase()} playlist. Add some in Manage Playlists.`;
+          return;
+        }
+
+        const randomSong = songs[Math.floor(Math.random() * songs.length)];
+        const blobURL = URL.createObjectURL(randomSong.blob);
+
+        songTitle.textContent = randomSong.name;
+        audio.src = blobURL;
+
+        audio.onloadedmetadata = () => {
+          const duration = audio.duration || 180;
+          const start = Math.random() * Math.max(0, duration - 35);
+          audio.currentTime = start;
+
+          customPlayer.style.display = 'block';
+          audio.play();
+          playPauseBtn.textContent = '⏸';
+          isPlaying = true;
+
+          clearTimeout(clipTimeout);
+          clipTimeout = setTimeout(() => {
+            audio.pause();
+            playPauseBtn.textContent = '▶';
+            isPlaying = false;
+          }, 30000);
+        };
+
+        status.innerHTML = `
+          <strong style="color: var(--accent); font-size: 2em;">${topMood.toUpperCase()} DETECTED</strong><br>
+          Now playing 30s vibe from:<br>
+          <em style="font-size: 1.3em;">${randomSong.name}</em>
+        `;
+      };
+    });
+  </script>
+</body>
+</html>
